@@ -6,6 +6,7 @@ import freesasa
 from freesasa import Structure
 from lightdock.pdbutil.PDBIO import parse_complex_from_file
 from lightdock.structure.complex import Complex
+from libpydock.parameters.DesolvationParameters import DesolvationParameters
 
 
 def parse_command_line():
@@ -23,10 +24,22 @@ def calculate_sasa(pdb_file):
     atoms, residues, chains = parse_complex_from_file(pdb_file)
     molecule = Complex(chains, atoms, structure_file_name=pdb_file)
 
+    parameters = DesolvationParameters()
+
     # Lightdock structure to freesasa structure
     structure = Structure()
     for atom in molecule.atoms:
         structure.addAtom(atom.name, atom.residue_name, atom.residue_number, atom.chain_id, atom.x, atom.y, atom.z)
+
+    atom_names = []
+    atom_radius = []
+    for atom in molecule.atoms:
+        atom_names.append("%-4s" % atom.name)
+        if atom.residue_name == 'CYX':
+            atom.residue_name = 'CYS'
+        atom_radius.append(parameters.radius_per_atom[atom.residue_name + "-" + atom.name])
+
+    structure.setRadii(atom_radius)
 
     start_time = timeit.default_timer()
     result = freesasa.calc(structure)
